@@ -1,0 +1,36 @@
+name: Build APK
+on: [push, workflow_dispatch]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Generate launcher icons
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
+          convert -size 512x512 xc:"#0B1E3A" -fill none -stroke "#C9A227" -strokewidth 22 -draw "rectangle 96,76 416,436" -draw "line 96,256 416,256" -draw "circle 256,256 256,196" -fill "#C9A227" -stroke none -draw "circle 256,256 256,238" icon.png
+          for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do n=$(echo $d | cut -d: -f1); s=$(echo $d | cut -d: -f2); mkdir -p app/src/main/res/mipmap-$n; convert icon.png -resize "$s"x"$s" app/src/main/res/mipmap-$n/ic_launcher.png; done
+
+      - name: Build
+        run: |
+          gradle wrapper --gradle-version 8.7
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Publish APK download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk SquadBuilder.apk
+          gh release delete apk -y --cleanup-tag || true
+          gh release create apk SquadBuilder.apk -t "Squad Builder APK" -n "Tap SquadBuilder.apk under Assets to download, then open it to install."
