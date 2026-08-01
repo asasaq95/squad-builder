@@ -155,6 +155,7 @@
   <div class="tabs" id="tabs"></div>
   <div class="bar">
     <select id="selFmt"></select>
+    <select id="selImport"><option value="">Import squad…</option></select>
     <button id="btnEdit" class="gold">Editing on</button>
     <button id="btnSave">Download data</button>
     <label class="file">Load data<input type="file" id="inpLoad" accept=".json"></label>
@@ -178,6 +179,7 @@
   <div id="benchList"></div>
 </div>
 
+<script src="squads.js"></script>
 <script>
 "use strict";
 /* ---------- device storage (works in Chrome on phone or desktop;
@@ -445,6 +447,38 @@ $("selFmt").addEventListener("change", e=>{
 });
 
 /* ---------- toolbar ---------- */
+/* Import a baked-in real squad as a new team.
+   GK players go to the goalkeeper slot; defenders, midfielders and
+   forwards are dealt round-robin across their line's slots so every
+   slot gets a ladder of options. */
+(function(){
+  const sel = $("selImport");
+  if (typeof SQUADS === "undefined"){ sel.style.display = "none"; return; }
+  Object.keys(SQUADS).forEach(club=>{
+    const o = document.createElement("option");
+    o.value = club; o.textContent = club;
+    sel.appendChild(o);
+  });
+  sel.addEventListener("change", ()=>{
+    const club = sel.value;
+    sel.value = "";
+    if(!club || !SQUADS[club]) return;
+    const t = newTeam(club);
+    const band = {GK:[], DF:[], MF:[], FW:[]};
+    SQUADS[club].forEach(p=>{
+      (band[p[2]] || band.MF).push({name:p[0], num:(p[1]===null ? "–" : String(p[1]))});
+    });
+    t.gk.players = band.GK;
+    [["DF",0],["MF",1],["FW",2]].forEach(([code, r])=>{
+      const row = t.rows[r];
+      band[code].forEach((pl, i)=> row[i % row.length].players.push(pl));
+    });
+    state.teams.push(t);
+    state.active = state.teams.length - 1;
+    render();
+  });
+})();
+
 $("btnEdit").addEventListener("click", ()=>{
   const on = document.body.classList.toggle("edit");
   $("btnEdit").textContent = on ? "Editing on" : "Editing off";
