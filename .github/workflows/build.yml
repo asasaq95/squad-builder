@@ -15,6 +15,18 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Install permanent signing key (when the secret exists)
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            mkdir -p ~/.android
+            echo "$KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
+            echo 'Permanent signing key installed.'
+          else
+            echo 'No KEYSTORE_B64 secret yet; using a throwaway key.'
+          fi
+
       - name: Generate launcher icons
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
