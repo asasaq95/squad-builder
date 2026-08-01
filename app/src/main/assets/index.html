@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B1E3A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Squad Builder</title>
+<style>
+  :root{
+    --navy:#0B1E3A; --navy2:#0F274A; --gold:#C9A227; --frost:#F7F8FB;
+    --line:rgba(247,248,251,.26); --pitchA:#1C4433; --pitchB:#20503C;
+    --bord:#1D3760;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--navy);color:var(--frost);
+    font-family:Inter,"Source Sans 3",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:14px 16px 40px;
+  }
+  .top{max-width:760px;margin:0 auto;}
+
+  /* team tabs */
+  .tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+  .tabs button{
+    font:inherit;font-size:12.5px;font-weight:600;
+    background:transparent;color:#D7DEE8;
+    border:1px solid #3A4C68;border-radius:4px;padding:7px 13px;cursor:pointer;
+  }
+  .tabs button.on{background:var(--gold);border-color:var(--gold);color:var(--navy);}
+  .tabs button.add{border-style:dashed;color:#8FA0B8;}
+
+  /* toolbar */
+  .bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:14px;}
+  .bar select,.bar button,.bar label.file{
+    font:inherit;font-size:12px;font-weight:600;
+    background:var(--navy2);color:#D7DEE8;
+    border:1px solid #3A4C68;border-radius:4px;padding:7px 11px;cursor:pointer;
+  }
+  .bar select{padding:6px 8px;}
+  .bar button.gold{background:var(--gold);border-color:var(--gold);color:var(--navy);}
+  .bar button.danger{border-color:#7A2A2A;color:#E0A0A0;}
+  .bar .sp{flex:1;}
+  .bar input[type=file]{display:none;}
+  .hint{font-size:11px;color:#7E8DA6;margin:-6px 0 12px;max-width:760px;}
+
+  /* board */
+  .board{max-width:760px;margin:0 auto;background:var(--navy2);border:1px solid var(--bord);border-radius:6px;overflow:hidden;}
+  .bhead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--bord);}
+  .bhead .tname{font-size:17px;font-weight:700;outline:none;border-radius:3px;padding:1px 5px;}
+  body.edit .bhead .tname{background:rgba(201,162,39,.1);box-shadow:inset 0 0 0 1px rgba(201,162,39,.4);}
+  .bhead .fmt{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--gold);font-weight:700;white-space:nowrap;}
+
+  .pitch{
+    position:relative;
+    background:repeating-linear-gradient(180deg,var(--pitchA) 0 5.55%,var(--pitchB) 5.55% 11.1%);
+    padding:30px 12px 22px;
+    display:flex;flex-direction:column;justify-content:space-between;
+    min-height:760px;
+  }
+  .lines{position:absolute;inset:10px;border:2px solid var(--line);pointer-events:none;}
+  .lines:before{content:"";position:absolute;left:0;right:0;top:50%;height:2px;background:var(--line);}
+  .circle{position:absolute;left:50%;top:50%;width:24%;aspect-ratio:1;transform:translate(-50%,-50%);border:2px solid var(--line);border-radius:50%;}
+  .gbox{position:absolute;left:50%;transform:translateX(-50%);width:54%;height:11%;border:2px solid var(--line);}
+  .gbox.top{top:0;border-top:none;}
+  .gbox.bottom{bottom:0;border-bottom:none;}
+
+  .prow{position:relative;z-index:2;display:flex;justify-content:space-around;align-items:flex-start;gap:6px;padding:0 2px;}
+  .prow.c1{justify-content:center;}
+
+  .slot{
+    flex:0 1 200px;min-width:0;
+    background:rgba(11,30,58,.68);
+    border:1px solid rgba(201,162,39,.45);
+    border-radius:5px;padding:6px 7px 7px;
+  }
+  .slot .lbl{
+    font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--gold);font-weight:700;
+    margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid rgba(201,162,39,.3);
+    outline:none;border-radius:2px;
+  }
+  body.edit .slot .lbl{background:rgba(201,162,39,.08);}
+  .opt{display:flex;align-items:center;gap:5px;margin-top:5px;}
+  .num{
+    flex:none;width:21px;height:21px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;font-weight:700;color:#B9C6DA;border:1.4px solid #6E80A0;
+    outline:none;
+  }
+  .opt.first .num{background:var(--gold);color:var(--navy);border-color:var(--gold);}
+  .who{font-size:11px;font-weight:600;color:#CBD6E6;outline:none;border-radius:2px;min-width:20px;flex:1;overflow-wrap:anywhere;}
+  .opt.first .who{color:#fff;}
+  body.edit .who{background:rgba(255,255,255,.05);}
+  .ctl{display:none;flex:none;gap:2px;}
+  body.edit .ctl{display:flex;}
+  .ctl button{
+    font-size:9px;line-height:1;background:transparent;color:#8FA0B8;
+    border:1px solid #3A4C68;border-radius:3px;width:17px;height:17px;cursor:pointer;padding:0;
+  }
+  .ctl button:hover{color:#fff;border-color:#8FA0B8;}
+  .addp{display:none;margin-top:6px;width:100%;font-size:9.5px;font-weight:600;
+    background:transparent;color:#8FA0B8;border:1px dashed #3A4C68;border-radius:3px;padding:3px;cursor:pointer;}
+  body.edit .addp{display:block;}
+  .addp:hover{color:var(--gold);border-color:var(--gold);}
+
+  /* bench */
+  .bench{max-width:760px;margin:12px auto 0;background:var(--navy2);border:1px solid var(--bord);border-radius:6px;padding:12px 16px;}
+  .bench h3{margin:0 0 8px;font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--gold);}
+  .bench .empty{font-size:11px;color:#556685;}
+  .chip{display:inline-flex;align-items:center;gap:6px;margin:3px 6px 3px 0;
+    background:var(--navy);border:1px solid #2A4066;border-radius:999px;padding:4px 6px 4px 10px;font-size:11px;}
+  .chip b{color:var(--gold);font-weight:700;}
+  .chip select{font-size:10px;background:var(--navy2);color:#D7DEE8;border:1px solid #3A4C68;border-radius:3px;max-width:110px;}
+  .chip button{font-size:10px;background:transparent;color:#8FA0B8;border:none;cursor:pointer;padding:0 2px;}
+  .chip button:hover{color:#E0A0A0;}
+
+  /* phone ergonomics: bigger touch targets, tighter board */
+  @media (max-width:640px){
+    body{padding:10px 6px 30px;}
+    .tabs button{padding:9px 14px;font-size:13px;}
+    .bar select,.bar button,.bar label.file{padding:9px 12px;font-size:12.5px;}
+    .pitch{padding:24px 4px 16px;min-height:640px;}
+    .prow{gap:3px;}
+    .slot{padding:5px 4px 5px;}
+    .slot .lbl{font-size:7.5px;letter-spacing:.7px;}
+    .who{font-size:10px;}
+    .num{width:19px;height:19px;font-size:9px;}
+    .ctl button{width:22px;height:22px;font-size:11px;}
+    .addp{padding:6px;font-size:10px;}
+    .chip{padding:6px 8px 6px 12px;font-size:12px;}
+    .chip button{font-size:13px;padding:0 5px;}
+  }
+
+  @page{ size:A4 portrait; margin:8mm; }
+  @media print{
+    html,body{background:var(--navy) !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:0;}
+    .tabs,.bar,.hint,.bench,.addp,.ctl{display:none !important;}
+    .board{max-width:none;border:none;border-radius:0;}
+    .pitch{min-height:250mm;}
+    .slot{padding:2.2mm 2.4mm 2.6mm;}
+    .slot .lbl{font-size:9pt;}
+    .who{font-size:10.5pt;}
+    .num{width:7mm;height:7mm;font-size:8.5pt;}
+    body.edit .who,body.edit .slot .lbl,body.edit .bhead .tname{background:none;box-shadow:none;}
+  }
+</style>
+</head>
+<body class="edit">
+
+<div class="top">
+  <div class="tabs" id="tabs"></div>
+  <div class="bar">
+    <select id="selFmt"></select>
+    <button id="btnEdit" class="gold">Editing on</button>
+    <button id="btnSave">Download data</button>
+    <label class="file">Load data<input type="file" id="inpLoad" accept=".json"></label>
+    <span class="sp"></span>
+    <button id="btnDel" class="danger">Delete team</button>
+    <button id="btnPrint" class="gold">Save as PDF</button>
+  </div>
+  <p class="hint"><span id="saveState"></span> &mdash; everything on the board is editable while editing is on: team name, position labels, numbers and names. The arrow moves a player up his position ladder, and the cross sends him to the pool below. Download data makes a backup file you can load on another device.</p>
+</div>
+
+<div class="board">
+  <div class="bhead">
+    <span class="tname" id="tname"></span>
+    <span class="fmt" id="fmtTag"></span>
+  </div>
+  <div class="pitch" id="pitch"></div>
+</div>
+
+<div class="bench">
+  <h3>Player pool</h3>
+  <div id="benchList"></div>
+</div>
+
+<script>
+"use strict";
+/* ---------- device storage (works in Chrome on phone or desktop;
+   silently unavailable inside restricted viewers, where the
+   download/load buttons remain the way to keep data) ---------- */
+const KEY = "squad-builder-v1";
+const store = {
+  ok:false,
+  probe(){
+    try{
+      const t = "__t" + Math.floor(Math.random()*1e6);
+      window.localStorage.setItem(t,"1");
+      window.localStorage.removeItem(t);
+      this.ok = true;
+    }catch(e){ this.ok = false; }
+    return this.ok;
+  },
+  load(){
+    if(!this.ok) return null;
+    try{ return JSON.parse(window.localStorage.getItem(KEY)); }catch(e){ return null; }
+  },
+  save(data){
+    if(!this.ok) return false;
+    try{ window.localStorage.setItem(KEY, JSON.stringify(data)); return true; }catch(e){ return false; }
+  }
+};
+
+/* ---------- formation catalogue ---------- */
+const FORMATIONS = ["4-3-3","4-4-2","4-2-3-1","3-5-2","3-4-3","5-3-2","5-2-3","4-1-4-1","4-3-2-1","4-2-2-2"];
+
+function defaultLabels(count, band, bandIdx, bandTotal){
+  const L = {
+    1:["Central"],2:["Left","Right"],3:["Left","Central","Right"],
+    4:["Left","Left centre","Right centre","Right"],
+    5:["Left","Left centre","Central","Right centre","Right"]
+  }[count] || Array.from({length:count},(_,i)=>"Slot "+(i+1));
+  if(band==="def"){
+    return {1:["Sweeper"],2:["Left CB","Right CB"],3:["Left CB","Centre CB","Right CB"],
+      4:["Left back","Left CB","Right CB","Right back"],
+      5:["Left WB","Left CB","Centre CB","Right CB","Right WB"]}[count] || L;
+  }
+  if(band==="att"){
+    return {1:["Striker"],2:["Left striker","Right striker"],3:["Left wing","Striker","Right wing"],
+      4:["Left wing","Left striker","Right striker","Right wing"]}[count] || L;
+  }
+  const tag = bandTotal>1 ? (bandIdx===0 ? " (deep)" : bandIdx===bandTotal-1 ? " (attacking)" : "") : "";
+  return L.map(x => x + " mid" + tag);
+}
+
+function buildRows(formation){
+  const nums = formation.split("-").map(n=>parseInt(n,10)).filter(n=>n>0 && n<=5);
+  const midBands = nums.length - 2;
+  return nums.map((count,i)=>{
+    const band = i===0 ? "def" : (i===nums.length-1 ? "att" : "mid");
+    const labels = defaultLabels(count, band, i-1, midBands);
+    return labels.map(lb => ({label:lb, players:[]}));
+  });
+}
+
+/* ---------- state ---------- */
+const state = { active:0, teams:[] };
+
+function newTeam(name){
+  const rows = buildRows("4-3-3");
+  return { name:name, formation:"4-3-3",
+    gk:{label:"Goalkeeper", players:[]},
+    rows:rows, bench:[] };
+}
+
+/* preloaded Real Madrid squad */
+(function(){
+  const t = newTeam("Real Madrid");
+  t.gk.players = [p("Courtois","1"),p("Lunin","13"),p("F. González","26")];
+  const R = t.rows;
+  R[0][0].players=[p("Cucurella","6"),p("Carreras","18")];
+  R[0][1].players=[p("Bastoni","23"),p("Huijsen","24")];
+  R[0][2].players=[p("Militão","3"),p("Konaté","4"),p("Rüdiger","22")];
+  R[0][3].players=[p("Trent","12"),p("Dumfries","2")];
+  R[1][0].players=[p("Güler","15"),p("B. Silva","20")];
+  R[1][1].players=[p("Rodri","16"),p("Tchouaméni","14")];
+  R[1][1].label="Holding";
+  R[1][2].players=[p("Bellingham","5"),p("Valverde","8"),p("Pitarch","45")];
+  R[2][0].players=[p("Vinícius","7"),p("Rodrygo","11")];
+  R[2][1].players=[p("Mbappé","10"),p("Endrick","9"),p("Gonzalo","19")];
+  R[2][2].players=[p("Diomande","17"),p("Brahim","21")];
+  state.teams.push(t);
+  function p(n,x){ return {name:n, num:x}; }
+})();
+
+/* restore a previous session if the device allows storage */
+store.probe();
+(function(){
+  const prev = store.load();
+  if(prev && Array.isArray(prev.teams) && prev.teams.length){
+    state.teams = prev.teams;
+    state.active = Math.min(prev.active || 0, prev.teams.length - 1);
+  }
+})();
+
+let savedAt = null;
+function persist(){
+  if(store.save(state)) savedAt = new Date();
+  const el = document.getElementById("saveState");
+  if(el){
+    el.textContent = store.ok
+      ? (savedAt ? "Saved on this device" : "Auto-save ready")
+      : "No device storage here. Use Download data.";
+    el.style.color = store.ok ? "#7FA07F" : "#C9A227";
+  }
+}
+
+function team(){ return state.teams[state.active]; }
+function allSlots(t){
+  const out = [{ref:t.gk, path:"gk"}];
+  t.rows.forEach((row,r)=>row.forEach((s,i)=>out.push({ref:s, path:r+":"+i})));
+  return out;
+}
+
+/* ---------- rendering ---------- */
+const $ = id => document.getElementById(id);
+let deleteArmed = false;
+
+function render(){
+  const t = team();
+
+  /* tabs */
+  const tabs = $("tabs"); tabs.innerHTML = "";
+  state.teams.forEach((tm,i)=>{
+    const b = document.createElement("button");
+    b.textContent = tm.name;
+    if(i===state.active) b.className = "on";
+    b.onclick = ()=>{ state.active=i; deleteArmed=false; render(); };
+    tabs.appendChild(b);
+  });
+  const add = document.createElement("button");
+  add.className = "add"; add.textContent = "+ New team";
+  add.onclick = ()=>{ state.teams.push(newTeam("New team " + (state.teams.length+1))); state.active = state.teams.length-1; render(); };
+  tabs.appendChild(add);
+
+  /* formation select */
+  const sel = $("selFmt"); sel.innerHTML = "";
+  FORMATIONS.forEach(f=>{
+    const o = document.createElement("option");
+    o.value = f; o.textContent = f;
+    sel.appendChild(o);
+  });
+  sel.value = t.formation;
+
+  /* header */
+  const tn = $("tname");
+  tn.textContent = t.name;
+  tn.contentEditable = document.body.classList.contains("edit");
+  tn.onblur = ()=>{ t.name = tn.textContent.trim() || t.name; render(); };
+  $("fmtTag").textContent = t.formation + " · " + (allSlots(t).reduce((a,s)=>a+s.ref.players.length,0) + t.bench.length) + " players";
+
+  /* pitch */
+  const pitch = $("pitch");
+  pitch.innerHTML = '<div class="lines"><span class="circle"></span><span class="gbox top"></span><span class="gbox bottom"></span></div>';
+  const rowsTopDown = [...t.rows].reverse();
+  rowsTopDown.forEach((row, idx)=>{
+    pitch.appendChild(rowNode(row, t.rows.length-1-idx, t));
+  });
+  pitch.appendChild(rowNode([t.gk], "gk", t));
+
+  /* bench */
+  const bl = $("benchList"); bl.innerHTML = "";
+  if(!t.bench.length){ bl.innerHTML = '<span class="empty">Empty. Players removed from the pitch land here.</span>'; }
+  t.bench.forEach((pl, bi)=>{
+    const c = document.createElement("span");
+    c.className = "chip";
+    c.innerHTML = '<b>'+esc(pl.num)+'</b> '+esc(pl.name)+' ';
+    const s = document.createElement("select");
+    s.innerHTML = '<option value="">move to…</option>';
+    allSlots(t).forEach(sl=>{
+      const o = document.createElement("option");
+      o.value = sl.path; o.textContent = sl.ref.label;
+      s.appendChild(o);
+    });
+    s.onchange = ()=>{
+      if(!s.value) return;
+      const sl = s.value==="gk" ? t.gk : t.rows[+s.value.split(":")[0]][+s.value.split(":")[1]];
+      sl.players.push(pl);
+      t.bench.splice(bi,1);
+      render();
+    };
+    const x = document.createElement("button");
+    x.textContent = "✕"; x.title = "Delete permanently";
+    x.onclick = ()=>{ t.bench.splice(bi,1); render(); };
+    c.appendChild(s); c.appendChild(x);
+    bl.appendChild(c);
+  });
+
+  $("btnDel").textContent = deleteArmed ? "Really delete?" : "Delete team";
+  persist();
+}
+
+function rowNode(row, rIdx, t){
+  const div = document.createElement("div");
+  div.className = "prow" + (row.length===1 ? " c1" : "");
+  row.forEach((slot, sIdx)=>{
+    const el = document.createElement("div");
+    el.className = "slot";
+    const lbl = document.createElement("div");
+    lbl.className = "lbl";
+    lbl.textContent = slot.label;
+    lbl.contentEditable = document.body.classList.contains("edit");
+    lbl.onblur = ()=>{ slot.label = lbl.textContent.trim() || slot.label; persist(); };
+    el.appendChild(lbl);
+
+    slot.players.forEach((pl, pi)=>{
+      const o = document.createElement("div");
+      o.className = "opt" + (pi===0 ? " first" : "");
+      const nm = document.createElement("span");
+      nm.className = "num"; nm.textContent = pl.num;
+      nm.contentEditable = document.body.classList.contains("edit");
+      nm.onblur = ()=>{ pl.num = nm.textContent.trim().slice(0,3) || "–"; persist(); };
+      const who = document.createElement("span");
+      who.className = "who"; who.textContent = pl.name;
+      who.contentEditable = document.body.classList.contains("edit");
+      who.onblur = ()=>{ pl.name = who.textContent.trim() || pl.name; persist(); };
+      const ctl = document.createElement("span");
+      ctl.className = "ctl";
+      const up = document.createElement("button");
+      up.textContent = "▲"; up.title = "Move up";
+      up.onclick = ()=>{ if(pi>0){ [slot.players[pi-1],slot.players[pi]]=[slot.players[pi],slot.players[pi-1]]; render(); } };
+      const rm = document.createElement("button");
+      rm.textContent = "✕"; rm.title = "Send to pool";
+      rm.onclick = ()=>{ team().bench.push(pl); slot.players.splice(pi,1); render(); };
+      ctl.appendChild(up); ctl.appendChild(rm);
+      o.appendChild(nm); o.appendChild(who); o.appendChild(ctl);
+      el.appendChild(o);
+    });
+
+    const ad = document.createElement("button");
+    ad.className = "addp"; ad.textContent = "+ player";
+    ad.onclick = ()=>{
+      slot.players.push({name:"Name", num:"–"});
+      render();
+      const slots = document.querySelectorAll(".slot");
+      /* focus the new name field */
+      const whos = el.querySelectorAll ? null : null;
+    };
+    el.appendChild(ad);
+    div.appendChild(el);
+  });
+  return div;
+}
+
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+/* ---------- formation change with player carry-over ---------- */
+$("selFmt").addEventListener("change", e=>{
+  const t = team();
+  const old = t.rows;
+  const next = buildRows(e.target.value);
+  const spill = [];
+  old.forEach((row,r)=>row.forEach((s,i)=>{
+    if(next[r] && next[r][i]) next[r][i].players = s.players;
+    else spill.push(...s.players);
+  }));
+  t.rows = next;
+  t.formation = e.target.value;
+  t.bench.push(...spill);
+  render();
+});
+
+/* ---------- toolbar ---------- */
+$("btnEdit").addEventListener("click", ()=>{
+  const on = document.body.classList.toggle("edit");
+  $("btnEdit").textContent = on ? "Editing on" : "Editing off";
+  $("btnEdit").classList.toggle("gold", on);
+  render();
+});
+$("btnPrint").addEventListener("click", ()=>{
+  if(window.AndroidBridge && AndroidBridge.printPage){ AndroidBridge.printPage(); return; }
+  window.print();
+});
+$("btnDel").addEventListener("click", ()=>{
+  if(!deleteArmed){ deleteArmed = true; render(); return; }
+  if(state.teams.length>1){ state.teams.splice(state.active,1); state.active = 0; }
+  else { state.teams[0] = newTeam("New team"); }
+  deleteArmed = false;
+  render();
+});
+$("btnSave").addEventListener("click", ()=>{
+  if(window.AndroidBridge && AndroidBridge.exportData){
+    AndroidBridge.exportData(JSON.stringify(state, null, 1));
+    return;
+  }
+  const blob = new Blob([JSON.stringify(state, null, 1)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "squads.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+$("inpLoad").addEventListener("change", e=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{
+    try{
+      const d = JSON.parse(r.result);
+      if(d && Array.isArray(d.teams) && d.teams.length){
+        state.teams = d.teams;
+        state.active = Math.min(d.active||0, d.teams.length-1);
+        render();
+      }
+    }catch(err){}
+  };
+  r.readAsText(f);
+  e.target.value = "";
+});
+
+render();
+</script>
+</body>
+</html>
